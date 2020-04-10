@@ -1,0 +1,61 @@
+---
+- name: Webserver
+  hosts: all
+
+  tasks:
+
+  - name: Update packages
+    become: yes
+    apt:
+      update_cache: true
+
+  - name: Upgrade all packages to the latest version
+    become: yes
+    apt:
+      upgrade: dist
+
+  - name: Install packages
+    become: yes
+    apt:
+      state: latest
+      pkg:
+        - python3-pip
+        - python3-dev
+        - python3-psycopg2
+        - libpq-dev
+        - postgresql
+        - postgresql-contrib
+        - nginx
+
+  - name: Install django, green unicorn and psycopg2-binary
+    pip:
+      name:
+        - django
+        - gunicorn
+        - psycopg2-binary
+
+  - name: make sure postgresql server is running
+    service:
+      name: postgresql
+      state: started
+      enabled: yes
+
+  - name: Create database
+    become: yes
+    become_user: postgres
+    postgresql_db:
+      name: dbname
+      state: present
+
+  - name: Grant user access to db created
+    become: yes
+    become_user: postgres
+    postgresql_user:
+      db: dbname
+      name: dbuser
+      password: dbpassword
+      priv: ALL
+      state: present
+
+  - name: Migrate
+    command: python3 /vagrant/api/manage.py migrate
