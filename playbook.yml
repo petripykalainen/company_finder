@@ -62,4 +62,56 @@
       state: present
 
   - name: Migrate
-    command: python3 /vagrant/api/manage.py migrate
+    django_manage:
+      app_path: /vagrant/api
+      command: migrate
+      virtualenv: /home/vagrant/.venv/django
+
+  - name: Copy gunicorn files
+    become: yes
+    copy:
+      src: files/gunicorn/
+      dest: /etc/systemd/system/
+
+  - name: Copy nginx files
+    become: yes
+    copy:
+      src: files/nginx/api
+      dest: /etc/nginx/sites-available/api
+
+  - name: Add symlink in sites-enabled
+    become: yes
+    file:
+      src: /etc/nginx/sites-available/api
+      dest: /etc/nginx/sites-enabled/api
+      state: link
+    notify:
+      - restart nginx
+
+  - name: Activate gunicorn socket
+    become: yes
+    service:
+      name: gunicorn.socket
+      enabled: yes
+    notify:
+      - restart gunicorn
+
+  handlers:
+
+    - name: systemd daemon-reload
+      become: yes
+      command: systemctl --system daemon-reload
+
+    - name: restart nginx
+      become: yes
+      service:
+        name: nginx
+        state: restarted
+
+    - name: restart gunicorn
+      become: yes
+      systemd:
+        name: gunicorn
+        daemon_reload: yes
+        enabled: yes
+        state: restarted
