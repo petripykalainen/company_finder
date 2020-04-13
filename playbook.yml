@@ -96,22 +96,48 @@
     notify:
       - restart gunicorn
 
+  - name: Configure ufw defaults
+    become: yes
+    ufw: direction={{ item.direction }} policy={{ item.policy }}
+    with_items:
+      - { direction: 'incoming', policy: 'deny' }
+      - { direction: 'outgoing', policy: 'allow' }
+    notify:
+      - restart ufw
+
+  - name: Configure ufw
+    become: yes
+    ufw: rule={{ item.rule }} port={{ item.port }} proto={{ item.proto }}
+    with_items:
+      - { rule: 'limit', port: '{{ ssh_port | default("22") }}', proto: 'tcp' }
+      - { rule: 'allow', port: '80', proto: 'tcp' }
+      - { rule: 'allow', port: '443', proto: 'tcp' }
+    notify:
+      - restart ufw
+
+  - name: Enable ufw
+    become: yes
+    ufw:
+      state: enabled
+
   handlers:
 
-    - name: systemd daemon-reload
-      become: yes
-      command: systemctl --system daemon-reload
+  - name: restart nginx
+    become: yes
+    service:
+      name: nginx
+      state: restarted
 
-    - name: restart nginx
-      become: yes
-      service:
-        name: nginx
-        state: restarted
+  - name: restart gunicorn
+    become: yes
+    systemd:
+      name: gunicorn
+      daemon_reload: yes
+      enabled: yes
+      state: restarted
 
-    - name: restart gunicorn
-      become: yes
-      systemd:
-        name: gunicorn
-        daemon_reload: yes
-        enabled: yes
-        state: restarted
+  - name: restart ufw
+    become: yes
+    service:
+      name: ufw
+      state: restarted
