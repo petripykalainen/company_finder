@@ -29,12 +29,14 @@
         - postgresql-contrib
         - nginx
 
-  - name: Install django, green unicorn and psycopg2-binary
+  - name: Install python dependencies
     pip:
-      name:
-        - django
-        - gunicorn
-        - psycopg2-binary
+      chdir: /vagrant
+      requirements: ./requirements.txt
+      #name:
+      #- django
+      #- gunicorn
+      #- psycopg2-binary
       virtualenv: /home/vagrant/.venv/django
       virtualenv_python: python3
 
